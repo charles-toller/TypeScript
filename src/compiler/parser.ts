@@ -2794,6 +2794,10 @@ namespace ts {
             parseExpected(SyntaxKind.OpenBracketToken);
             node.typeParameter = parseMappedTypeParameter();
             parseExpected(SyntaxKind.CloseBracketToken);
+            if (token() === SyntaxKind.PlusToken && lookAhead(() => nextToken() === SyntaxKind.StringLiteral || token() === SyntaxKind.NumericLiteral)) {
+                parseExpected(SyntaxKind.PlusToken);
+                node.augmentKeyNode = <StringLiteral | NumericLiteral>parseLiteralNode();
+            }
             if (token() === SyntaxKind.QuestionToken || token() === SyntaxKind.PlusToken || token() === SyntaxKind.MinusToken) {
                 node.questionToken = parseTokenNode<QuestionToken | PlusToken | MinusToken>();
                 if (node.questionToken.kind !== SyntaxKind.QuestionToken) {

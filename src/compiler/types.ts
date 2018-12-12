@@ -1253,6 +1253,7 @@ namespace ts {
         readonlyToken?: ReadonlyToken | PlusToken | MinusToken;
         typeParameter: TypeParameterDeclaration;
         questionToken?: QuestionToken | PlusToken | MinusToken;
+        augmentKeyNode: StringLiteral | NumericLiteral;
         type?: TypeNode;
     }
 

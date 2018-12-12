@@ -6942,6 +6942,7 @@ namespace ts {
             const modifiersType = getApparentType(getModifiersTypeFromMappedType(type)); // The 'T' in 'keyof T'
             const templateModifiers = getMappedTypeModifiers(type);
             const include = keyofStringsOnly ? TypeFlags.StringLiteral : TypeFlags.StringOrNumberLiteralOrUnique;
+            const augmentKeyBy = type.declaration.augmentKeyNode ? type.declaration.augmentKeyNode.text : "";
             if (isMappedTypeWithKeyofConstraintDeclaration(type)) {
                 // We have a { [P in keyof T]: X }
                 for (const prop of getPropertiesOfType(modifiersType)) {
@@ -6977,19 +6978,22 @@ namespace ts {
                         !(templateModifiers & MappedTypeModifiers.ExcludeOptional) && modifiersProp && modifiersProp.flags & SymbolFlags.Optional);
                     const isReadonly = !!(templateModifiers & MappedTypeModifiers.IncludeReadonly ||
                         !(templateModifiers & MappedTypeModifiers.ExcludeReadonly) && modifiersProp && isReadonlySymbol(modifiersProp));
-                    const prop = createSymbol(SymbolFlags.Property | (isOptional ? SymbolFlags.Optional : 0), propName, isReadonly ? CheckFlags.Readonly : 0);
+                    const augmentedT = augmentKeyBy !== "" && t.flags & TypeFlags.StringLiteral ? getLiteralType((t as LiteralType).value + augmentKeyBy) : t;
+
+                    const augmentedPropName = getLateBoundNameFromType(augmentedT as LiteralType);
+                    const prop = createSymbol(SymbolFlags.Property | (isOptional ? SymbolFlags.Optional : 0), augmentedPropName, isReadonly ? CheckFlags.Readonly : 0);
                     // When creating an optional property in strictNullChecks mode, if 'undefined' isn't assignable to the
                     // type, we include 'undefined' in the type. Similarly, when creating a non-optional property in strictNullChecks
                     // mode, if the underlying property is optional we remove 'undefined' from the type.
                     prop.type = strictNullChecks && isOptional && !isTypeAssignableTo(undefinedType, propType) ? getOptionalType(propType) :
                         strictNullChecks && !isOptional && modifiersProp && modifiersProp.flags & SymbolFlags.Optional ? getTypeWithFacts(propType, TypeFacts.NEUndefined) :
                         propType;
-                    if (modifiersProp) {
+                    if (augmentedT === t && modifiersProp) {
                         prop.syntheticOrigin = modifiersProp;
                         prop.declarations = modifiersProp.declarations;
                     }
-                    prop.nameType = t;
-                    members.set(propName, prop);
+                    prop.nameType = augmentedT;
+                    members.set(augmentedPropName, prop);
                 }
                 else if (t.flags & (TypeFlags.Any | TypeFlags.String)) {
                     stringIndexInfo = createIndexInfo(propType, !!(templateModifiers & MappedTypeModifiers.IncludeReadonly));
